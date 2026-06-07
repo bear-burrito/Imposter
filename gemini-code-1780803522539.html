@@ -1,0 +1,373 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Imposter Word Game</title>
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#1e1e2e">
+    <style>
+        :root {
+            --bg-color: #1e1e2e;
+            --surface-color: #252538;
+            --accent-color: #cba6f7;
+            --text-color: #cdd6f4;
+            --danger-color: #f38ba8;
+            --muted-color: #6c7086;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .card {
+            background: var(--surface-color);
+            padding: 30px;
+            border-radius: 16px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+            width: 100%;
+            max-width: 450px;
+            text-align: center;
+            display: none;
+        }
+
+        .card.active { display: block; }
+
+        h1 { margin-bottom: 20px; color: var(--accent-color); }
+        h2 { margin-bottom: 15px; }
+        p { margin-bottom: 20px; line-height: 1.5; opacity: 0.9; }
+
+        input, select, button {
+            width: 100%;
+            padding: 12px;
+            margin: 10px 0;
+            border-radius: 8px;
+            border: none;
+            font-size: 16px;
+        }
+
+        input, select {
+            background: #313244;
+            color: var(--text-color);
+        }
+
+        button {
+            background: var(--accent-color);
+            color: #11111b;
+            font-weight: bold;
+            cursor: pointer;
+            transition: opacity 0.2s;
+        }
+
+        button:hover { opacity: 0.9; }
+        
+        .danger-btn { background: var(--danger-color); color: #11111b; }
+        
+        /* Category Selector Grid */
+        .category-container {
+            background: #11111b;
+            padding: 15px;
+            border-radius: 8px;
+            max-height: 160px;
+            overflow-y: auto;
+            text-align: left;
+            margin: 10px 0 20px 0;
+        }
+
+        .category-item {
+            display: flex;
+            align-items: center;
+            margin: 8px 0;
+            cursor: pointer;
+        }
+
+        .category-item input {
+            width: auto;
+            margin: 0 10px 0 0;
+            transform: scale(1.2);
+        }
+
+        .secret-box {
+            background: #313244;
+            padding: 30px;
+            border-radius: 8px;
+            font-size: 24px;
+            font-weight: bold;
+            letter-spacing: 1px;
+            margin: 20px 0;
+            border: 2px dashed var(--accent-color);
+        }
+        
+        .imposter-text { color: var(--danger-color); border-color: var(--danger-color); }
+
+        ul { text-align: left; margin: 15px 0; list-style-position: inside; }
+        li { margin: 5px 0; display: flex; justify-content: space-between; align-items: center; background: #313244; padding: 8px 12px; border-radius: 6px; }
+        .remove-btn { background: none; color: var(--danger-color); width: auto; margin: 0; padding: 0 5px; font-size: 14px; }
+    </style>
+</head>
+<body>
+
+    <div id="screen-setup" class="card active">
+        <h1>The Imposter Game</h1>
+        
+        <label style="text-align: left; display: block; font-size: 14px; color: var(--accent-color);">Select Categories (Choose multiple):</label>
+        <div id="category-checkboxes" class="category-container">Loading categories...</div>
+
+        <label style="text-align: left; display: block; font-size: 14px; color: var(--accent-color);">Imposter Settings:</label>
+        <select id="imposter-select">
+            <option value="1">1 Imposter</option>
+            <option value="2">2 Imposters</option>
+            <option value="1-2">Random (1 or 2 Imposters)</option>
+        </select>
+
+        <label style="text-align: left; display: block; font-size: 14px; color: var(--accent-color); margin-top: 10px;">Players Setup:</label>
+        <div style="display: flex; gap: 10px;">
+            <input type="text" id="player-input" placeholder="Player Name" maxlength="15">
+            <button id="add-player-btn" style="width: auto; padding: 0 20px;">Add</button>
+        </div>
+        <ul id="player-list"></ul>
+        
+        <button id="start-game-btn" style="margin-top: 20px; background: #a6e3a1;">Start Game</button>
+    </div>
+
+    <div id="screen-pass" class="card">
+        <h1>Pass the Phone</h1>
+        <p>Hand the device over to:</p>
+        <h2 id="pass-to-name" style="color: var(--accent-color); font-size: 32px; margin: 20px 0;">[Name]</h2>
+        <p style="color: var(--muted-color); font-size: 14px;">Ensure no one else can see your screen before tapping reveal.</p>
+        <button id="reveal-btn">I am ready to see my word</button>
+    </div>
+
+    <div id="screen-reveal" class="card">
+        <h1>Your Secret Role</h1>
+        <h2 id="reveal-player-name" style="color: var(--accent-color);"></h2>
+        <div id="secret-word-display" class="secret-box"></div>
+        <p id="role-instruction"></p>
+        <button id="hide-btn">Got it, hide this screen</button>
+    </div>
+
+    <div id="screen-play" class="card">
+        <h1>Discuss!</h1>
+        <p>All players have safely verified their identities.</p>
+        <p>Go around in a circle and give a <strong>single word clue</strong>. The Imposter must try to blend in.</p>
+        <button id="restart-btn" class="danger-btn">Play Again</button>
+    </div>
+
+    <script>
+        // --- GAME STATE ---
+        let wordDatabase = {};
+        let players = [];
+        let gameState = {
+            combinedWordPool: [],
+            secretWord: "",
+            imposterIndices: [],
+            currentPlayerIndex: 0
+        };
+
+        // --- PWA SERVICE WORKER REGISTRATION ---
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('sw.js').catch(err => console.log('SW registration failed:', err));
+            });
+        }
+
+        // --- INIT & CSV PARSING ---
+        document.addEventListener("DOMContentLoaded", () => {
+            fetch('categories.csv')
+                .then(response => response.text())
+                .then(csvText => {
+                    parseCSVData(csvText);
+                    renderCategoryCheckboxes();
+                })
+                .catch(err => alert("Error parsing categories.csv file. Ensure it is placed in the root folder."));
+            
+            setupEventListeners();
+        });
+
+        function parseCSVData(text) {
+            const lines = text.split('\n').map(line => line.split(',').map(cell => cell.trim()));
+            const headers = lines[0];
+            
+            headers.forEach(header => {
+                if(header) wordDatabase[header] = [];
+            });
+
+            for (let i = 1; i < lines.length; i++) {
+                lines[i].forEach((cell, index) => {
+                    const header = headers[index];
+                    if (cell && header) {
+                        wordDatabase[header].push(cell);
+                    }
+                });
+            }
+        }
+
+        function renderCategoryCheckboxes() {
+            const container = document.getElementById("category-checkboxes");
+            container.innerHTML = "";
+            Object.keys(wordDatabase).forEach(category => {
+                const label = document.createElement("label");
+                label.className = "category-item";
+                
+                const checkbox = document.createElement("input");
+                checkbox.type = "checkbox";
+                checkbox.className = "category-cb";
+                checkbox.value = category;
+                checkbox.checked = true; // Default select all to make starting fast
+                
+                label.appendChild(checkbox);
+                label.appendChild(document.createTextNode(category));
+                container.appendChild(label);
+            });
+        }
+
+        // --- UI ROUTER ---
+        function showScreen(screenId) {
+            document.querySelectorAll('.card').forEach(card => card.classList.remove('active'));
+            document.getElementById(screenId).classList.add('active');
+        }
+
+        function setupEventListeners() {
+            const playerInput = document.getElementById("player-input");
+            
+            document.getElementById("add-player-btn").addEventListener("click", () => {
+                const name = playerInput.value.trim();
+                if(name && !players.includes(name)) {
+                    players.push(name);
+                    renderPlayerList();
+                    playerInput.value = "";
+                }
+            });
+
+            // Allow enter key to submit player names rapidly
+            playerInput.addEventListener("keypress", (e) => {
+                if (e.key === "Enter") document.getElementById("add-player-btn").click();
+            });
+
+            document.getElementById("start-game-btn").addEventListener("click", initGame);
+            document.getElementById("reveal-btn").addEventListener("click", showSecret);
+            document.getElementById("hide-btn").addEventListener("click", handleNextPlayer);
+            document.getElementById("restart-btn").addEventListener("click", () => {
+                gameState.currentPlayerIndex = 0;
+                showScreen("screen-setup");
+            });
+        }
+
+        function renderPlayerList() {
+            const list = document.getElementById("player-list");
+            list.innerHTML = "";
+            players.forEach((player, i) => {
+                let li = document.createElement("li");
+                li.textContent = player;
+                
+                let rmBtn = document.createElement("button");
+                rmBtn.textContent = "✕";
+                rmBtn.className = "remove-btn";
+                rmBtn.onclick = () => {
+                    players.splice(i, 1);
+                    renderPlayerList();
+                };
+                
+                li.appendChild(rmBtn);
+                list.appendChild(li);
+            });
+        }
+
+        // --- GAME SYSTEM LOGIC ---
+        function initGame() {
+            // Gather selected categories
+            let selectedCategories = [];
+            document.querySelectorAll(".category-cb:checked").forEach(cb => {
+                selectedCategories.push(cb.value);
+            });
+
+            if(selectedCategories.length === 0) {
+                alert("Please select at least one word category!");
+                return;
+            }
+
+            // Build combined vocabulary pool
+            let masterPool = [];
+            selectedCategories.forEach(cat => {
+                masterPool = masterPool.concat(wordDatabase[cat]);
+            });
+
+            if (masterPool.length === 0) {
+                alert("The chosen categories don't have any words written in them.");
+                return;
+            }
+
+            // Resolve target imposter counts
+            const imposterSetting = document.getElementById("imposter-select").value;
+            let targetImposterCount = 1;
+            if (imposterSetting === "1-2") {
+                targetImposterCount = Math.random() < 0.5 ? 1 : 2;
+            } else {
+                targetImposterCount = parseInt(imposterSetting, 10);
+            }
+
+            // Security check against the lobby bounds
+            if (players.length < (targetImposterCount + 2)) {
+                alert(`For ${targetImposterCount} imposters, you need at least ${targetImposterCount + 2} players to keep the game balanced!`);
+                return;
+            }
+
+            // Assign unique roles via index maps
+            gameState.imposterIndices = [];
+            while (gameState.imposterIndices.length < targetImposterCount) {
+                let roll = Math.floor(Math.random() * players.length);
+                if (!gameState.imposterIndices.includes(roll)) {
+                    gameState.imposterIndices.push(roll);
+                }
+            }
+
+            gameState.secretWord = masterPool[Math.floor(Math.random() * masterPool.length)];
+            gameState.currentPlayerIndex = 0;
+
+            preparePassScreen();
+        }
+
+        function preparePassScreen() {
+            document.getElementById("pass-to-name").textContent = players[gameState.currentPlayerIndex];
+            showScreen("screen-pass");
+        }
+
+        function showSecret() {
+            const isImposter = gameState.imposterIndices.includes(gameState.currentPlayerIndex);
+            document.getElementById("reveal-player-name").textContent = players[gameState.currentPlayerIndex];
+            
+            const display = document.getElementById("secret-word-display");
+            const instruction = document.getElementById("role-instruction");
+
+            if (isImposter) {
+                display.textContent = "IMPOSTER";
+                display.classList.add("imposter-text");
+                instruction.textContent = "You don't know the secret word. Listen closely to what everyone says, deduce the theme, and lock down a good bluff!";
+            } else {
+                display.textContent = gameState.secretWord;
+                display.classList.remove("imposter-text");
+                instruction.textContent = "You are an Agent. Give a subtle clue about this word without handing the exact answer directly to the Imposters.";
+            }
+
+            showScreen("screen-reveal");
+        }
+
+        function handleNextPlayer() {
+            gameState.currentPlayerIndex++;
+            if (gameState.currentPlayerIndex < players.length) {
+                preparePassScreen();
+            } else {
+                showScreen("screen-play");
+            }
+        }
+    </script>
+</body>
+</html>
